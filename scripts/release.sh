@@ -50,9 +50,24 @@ test -f "$DMG" || { echo "✗ DMG not found at $DMG"; exit 1; }
 # --- build release notes from commits since last tag ---
 last_tag="$(git -C "$ROOT" describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0-milestone1")"
 log="$(git -C "$ROOT" log --oneline "$last_tag"..HEAD 2>/dev/null | sed 's/^/  - /' | head -40)"
-notes="# Computer.js Runtime v$new\n\n## What's new\n$log\n\n## Install\n1. Open the DMG\n2. Drag **Computer.js Runtime.app** onto the **Applications** shortcut\n3. Launch it (right-click → Open the first time; ad-hoc signed) — control panel at http://127.0.0.1:8788/\n\n## Download\n- **Computerjs-Runtime-v$new.dmg**"
+notes="# Computer.js Runtime v$new
+
+## What's new
+$log
+
+## Install
+1. Open the DMG
+2. Drag **Computer.js Runtime.app** onto the **Applications** shortcut
+3. Launch it (right-click → Open the first time; ad-hoc signed) — control panel at http://127.0.0.1:8788/
+
+## Download
+- **Computerjs-Runtime-v$new.dmg**"
 if [ -n "$note" ]; then
-  notes="$notes\n\n---\n\n$note"
+  notes="$notes
+
+---
+
+$note"
 fi
 
 echo ""
