@@ -5,6 +5,10 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$DIR/.." && pwd)"
 APP="$DIR/dist/Computer.js Runtime.app"
 BIN="$DIR/.build/release/ComputerRuntime"
+
+# Read the canonical version from Version.swift
+VER="$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' "$DIR/Sources/ComputerRuntime/Version.swift" | head -1 | tr -d '"')"
+
 if [ ! -f "$BIN" ]; then
   echo "release binary missing — building"
   (cd "$DIR" && swift build -c release)
@@ -16,7 +20,7 @@ cp "$BIN" "$APP/Contents/MacOS/ComputerRuntime"
 # bundle the control panel (web/) into Resources/www
 cp -R "$ROOT/web/." "$APP/Contents/Resources/www/"
 
-cat > "$APP/Contents/Info.plist" << 'PLIST'
+cat > "$APP/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -24,8 +28,8 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
 	<key>CFBundleName</key><string>Computer.js Runtime</string>
 	<key>CFBundleDisplayName</key><string>Computer.js Runtime</string>
 	<key>CFBundleIdentifier</key><string>dev.computerjs.runtime</string>
-	<key>CFBundleVersion</key><string>0.2.0</string>
-	<key>CFBundleShortVersionString</key><string>0.2.0</string>
+	<key>CFBundleVersion</key><string>$VER</string>
+	<key>CFBundleShortVersionString</key><string>$VER</string>
 	<key>CFBundleExecutable</key><string>ComputerRuntime</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>LSMinimumSystemVersion</key><string>14.0</string>
@@ -36,4 +40,4 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
 </plist>
 PLIST
 
-echo "Built: $APP"
+echo "Built: $APP (v$VER)"

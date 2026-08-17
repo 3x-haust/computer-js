@@ -7,7 +7,8 @@ DIST="$ROOT/native/dist"
 
 APP="$DIST/Computer.js Runtime.app"
 STAGE="$DIST/DMGContents"
-DMG="$DIST/Computerjs-Runtime-v0.2.0.dmg"
+VER="$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' "$ROOT/native/Sources/ComputerRuntime/Version.swift" | head -1 | tr -d '"')"
+DMG="$DIST/Computerjs-Runtime-v$VER.dmg"
 
 if [ ! -d "$APP" ]; then
   echo "✗ Missing app bundle. Build it first with Scripts/make_app.sh"

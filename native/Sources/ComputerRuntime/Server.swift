@@ -119,7 +119,7 @@ final class RuntimeServer {
         httpServer = HTTPServer(port: 8788, rootDir: Self.wwwDir)
         httpServer?.start()
 
-        let about = "Computer.js Runtime v0.2.0 (native)"
+        let about = "Computer.js Runtime v\(RuntimeVersion.string) (native)"
         Logger.log(about)
         Logger.log("  WebSocket: ws://127.0.0.1:8787/ws")
         Logger.log("  Control panel: http://127.0.0.1:8788/")

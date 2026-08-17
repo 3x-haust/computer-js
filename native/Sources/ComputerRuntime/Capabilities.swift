@@ -34,7 +34,7 @@ enum Capabilities {
     private static func runtimeStatus() -> [String: Any] {
         return [
             "server": "computer-runtime",
-            "version": "0.2.0-native",
+            "version": RuntimeVersion.string,
             "os": "macos",
             "status": "running",
             "transport": "local-ws",
@@ -71,11 +71,21 @@ enum Capabilities {
         let action = params["action"] as? String ?? "lock"
         switch action {
         case "lock":
-            try? NSWorkspace.shared.open(URL(string: "screen-lock")!)
+            // Turn off the display. On an account that requires a password on
+            // wake, this routes through the lock screen (unlock with password /
+            // Touch ID / Face ID). Prefer any CGSession binary where present;
+            // otherwise fall back to display sleep. Never posts to a made-up URL
+            // scheme (that produced error -50).
+            let cgsession = "/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession"
+            if FileManager.default.fileExists(atPath: cgsession) {
+                _ = systemCommand("\"\(cgsession)\" -suspend")
+            } else {
+                _ = systemCommand("pmset displaysleepnow")
+            }
             return ["action": "lock", "ok": true]
         case "sleep":
-            let script = "tell application \"System Events\" to sleep"
-            _ = systemCommand("osascript -e '\(script)'")
+            // Put the display to sleep.
+            _ = systemCommand("pmset displaysleepnow")
             return ["action": "sleep", "ok": true]
         default:
             throw RPCError.code(-32602, "Unknown system.control action: \(action) (lock|sleep)")

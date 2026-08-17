@@ -70,7 +70,7 @@ final class Dispatcher {
         case "runtime.status":
             result(id, [
                 "server": "computer-runtime",
-                "version": "0.2.0-native",
+                "version": RuntimeVersion.string,
                 "os": "macos",
                 "status": "running",
                 "transport": "local-ws",
