@@ -8,3 +8,7 @@ grants.db
 # private strategy docs (not part of the public project)
 computer-js-name-and-implementation-guide.md
 web-os-computer-runtime-platform.md
+
+# swift build + packaged artifacts
+native/.build/
+native/dist/

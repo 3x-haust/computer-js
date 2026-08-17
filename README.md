@@ -1,103 +1,77 @@
-# Computer.js — Web API for your Mac
+# Computer.js — Web API for your computer
 
 > **웹사이트가 사용자의 허가를 받아 실제 컴퓨터 기능을 호출한다.**
-> A website calls real macOS features (screen, mouse, keyboard, apps, files) after the user approves — through a local **Computer Runtime**.
+> Websites call real macOS features (screen, mouse, keyboard, apps, files) after the user approves — through a local, native **Computer Runtime**.
 
-This is **Milestone 1**: a working end-to-end loop on macOS. A webpage uses a TypeScript SDK (`computer.*`) that talks JSON-RPC over WebSocket to a local Python Runtime, which drives the real OS via PyAutoGUI + native macOS tools.
+## What this is
+
+- **Native macOS app** (Swift + AppKit, no Electron, no Python) — a menu-bar agent that:
+  - serves a **real control panel** at `http://127.0.0.1:8788/` (screenshot studio, clipboard center, app launcher, file tools, typing, hotkeys)
+  - exposes a **WebSocket JSON-RPC API** at `ws://127.0.0.1:8787/ws`
+  - enforces **per-origin, per-capability permissions** with **native macOS approval dialogs**
+- **TypeScript Web SDK** — the `computer.*` API any website can use
+- **Distributed as a DMG** (ad-hoc code-signed)
 
 ```
-┌─────────────┐   WebSocket   ┌──────────────────┐
-│   Web SDK    │ ───────────► │   Runtime (local) │ ──► macOS
-│  (browser)   │   JSON-RPC    │  python runtime.py │    PyAutoGUI, open,
-└─────────────┘               └──────────────────┘    pbcopy, screencapture
-         ▲                            ▲
-         └── user approves in native dialog (strong caps)
+┌─────────────────────┐  WebSocket   ┌──────────────────────────────┐
+│  Control panel / SDK │ ───────────► │  Computer.js Runtime (.app)  │
+│  (my browser)        │   JSON-RPC    │  Swift · AppKit · native     │
+└─────────────────────┘               └──────────────┬───────────────┘
+                                                     │
+                                      macOS APIs: ScreenCaptureKit,
+                                      CGEvent, NSWorkspace, NSPasteboard
 ```
 
-## What works right now
+## Install (DMG)
 
-| Group | Capability | Notes |
+1. Download the latest `.dmg` from **Releases**.
+2. Open it and drag **Computer.js Runtime.app** to Applications.
+3. Launch it (right-click → Open the first time; it's ad-hoc signed).
+4. The control panel opens at **http://127.0.0.1:8788/** automatically.
+5. Grant **Accessibility** + **Screen Recording** in System Settings when prompted.
+
+## What the control panel does
+
+| Tool | Capability | macOS mechanism |
 |---|---|---|
-| Permissions | `permissions.query` / `request` / `revoke` | per-origin, persisted in `runtime/grants.db`; strong caps show a **native macOS dialog** |
-| Screen | `screen.capture` | full-screen or frontmost window → PNG (base64) |
-| Mouse | `mouse.move` / `click` / `scroll` | needs Accessibility |
-| Keyboard | `keyboard.type` / `press` / `hotkey` | needs Accessibility |
-| Apps | `apps.open` | bundle id, app name, or file path |
-| Files | `files.reveal` / `open` | reveal in Finder, open default app |
-| Clipboard | `clipboard.read` / `write` | read requires grant |
+| 📸 Screenshot studio | full-screen / window capture + download, copy | ScreenCaptureKit |
+| 📋 Clipboard center | read / write / save clipboard | NSPasteboard |
+| 🚀 App launcher | open any app by name or bundle id | NSWorkspace |
+| 📁 Files & folders | reveal in Finder, open default app | NSWorkspace |
+| ⌨️ Type & shortcuts | type text, press hotkeys (⌘⇥, ⌘Space, ⌘C…) | CGEvent |
+
+Every capability is **denied until you grant it**. Strong ones (screen, mouse, keyboard, clipboard read) always show a native approval dialog.
 
 ## Layout
 
 ```
-sdk/        TypeScript Web SDK (@computerjs/sdk) -> dist/computer.js (ESM), computer.iife.js (global <script>)
-runtime/    Python Runtime (aiohttp WebSocket + JSON-RPC server)
-examples/   demo.html — the demo page that drives your Mac
+native/    Swift runtime (Package.swift) → build script → .app → .dmg
+sdk/       TypeScript Web SDK (@computerjs/sdk) → ESM + browser IIFE bundle
+web/       Control panel (index.html) served by the Runtime at :8788
+examples/  Original demo page
 ```
 
-## Quickstart
-
-### 1. Start the Runtime
+## Building the app & DMG
 
 ```bash
-python3 -m pip install aiohttp pyautogui     # if not already installed
-python3 runtime/runtime.py --port 8787
-```
-
-macOS will ask for **Accessibility** (mouse/keyboard) and **Screen Recording** (capture) permissions on first use. Grant them in **System Settings > Privacy & Security**.
-
-### 2. Serve the demo
-
-```bash
-python3 -m http.server 3000
-```
-
-### 3. Open the demo
-
-Open **http://localhost:3000/examples/demo.html**, click **Connect**, then **Grant everything** (approve the native dialog), then click the action buttons — watch your cursor move and your screen capture.
-
-## Using the SDK in your own page
-
-Via a plain `<script>` tag:
-
-```html
-<script src="/sdk/dist/computer.iife.js"></script>
-<script>
-  await window.computer.connect({ url: "ws://127.0.0.1:8787/ws" });
-  await window.computer.permissions.request(["screen.capture", "mouse.move"]);
-  const shot = await window.computer.screen.capture();
-  const img = "data:image/png;base64," + shot.data;
-</script>
-```
-
-As an ES module:
-
-```ts
-import { computer } from "@computerjs/sdk";
-await computer.connect();
-await computer.permissions.request(["apps.open"]);
-await computer.apps.open({ id_or_path: "com.apple.Safari" });
-```
-
-## Rebuilding the SDK
-
-```bash
-cd sdk && npm install && npm run build
+cd native
+swift build -c release
+bash Scripts/make_app.sh                    # builds .app with bundled control panel
+codesign --force --deep --sign - "dist/Computer.js Runtime.app"
+hdiutil create -volname "Computer.js Runtime" \
+  -srcfolder "dist/Computer.js Runtime.app" -ov -format UDZO \
+  "dist/Computerjs-Runtime-v0.2.0.dmg"
 ```
 
 ## Tests
 
 ```bash
-cd runtime && python3 smoke_test.py      # runtime: permission gate, actions, errors
-cd sdk && node e2e.test.mjs              # built SDK bundle → live runtime → real OS
+cd sdk && COMPUTER_RUNTIME_AUTO_APPROVE=1 node e2e.test.mjs   # against running app
 ```
 
-Both pass against a running Runtime on `127.0.0.1:8787`.
+## Scope & honest limitations (v0.2.0)
 
-## Scope & honest limitations (Milestone 1)
-
-- **Local-only**: connects straight to `127.0.0.1` (no Relay server, no pairing challenge, no E2E encryption). That's the explicit next milestone.
-- **Keyboard/mouse** are coordinates via PyAutoGUI; the product spec correctly wants AXUIElement / UI Automation later.
-- **Permission UX** uses an AppleScript `display dialog`. A real Runtime should draw its own native approval window.
-- **Not production**: no code signing, no packaging.
-
-For the full product roadmap, security threat model, and OS matrix, see `computer-js-name-and-implementation-guide.md`.
+- **Local-only** transport on loopback; no TLS, no code signing identity, no notarization.
+- Coordinate-based input via CGEvent (the product roadmap calls for AXUIElement / UI Automation).
+- The control panel is served by the Runtime itself — a hosted page on `github.io` **cannot** reach your localhost due to Chrome Local Network Access rules (by design).
+- Ad-hoc code signature: macOS will warn on first open. Full release needs a Developer ID + notarization.

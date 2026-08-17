@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Computer.js — Control Panel</title>
+<style>
+  :root {
+    --bg: #0a0e14; --panel: #12161f; --panel2: #171c28; --border: #252c3a;
+    --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950;
+    --red: #f85149; --yellow: #d29922;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+    padding-bottom: 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 22px; }
+
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; letter-spacing: -0.01em; }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+    background: rgba(63,185,80,.12); color: var(--green); border: 1px solid rgba(63,185,80,.4);
+  }
+  .badge.off { background: rgba(248,81,73,.12); color: var(--red); border-color: rgba(248,81,73,.4); }
+  .badge.work { background: rgba(210,153,34,.12); color: var(--yellow); border-color: rgba(210,153,34,.4); }
+  .spacer { flex: 1; }
+
+  section { margin-top: 26px; }
+  section h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 10px;
+  }
+  section h2 .req { text-transform: none; font-size: 11px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h3 { font-size: 14px; margin-bottom: 10px; color: var(--accent); }
+
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--text);
+    background: #212836; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 14px; cursor: pointer; transition: background .15s;
+  }
+  button:hover:not(:disabled) { background: #2b3445; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: #1f6feb; border-color: #1f6feb; }
+  button.primary:hover:not(:disabled) { background: #2f81f7; }
+  button.green { background: #238636; border-color: #238636; }
+  button.green:hover:not(:disabled) { background: #2ea043; }
+  button.danger { color: var(--red); }
+  button.danger:hover:not(:disabled) { background: rgba(248,81,73,.12); }
+  button.small { padding: 5px 9px; font-size: 11px; }
+
+  input[type="text"], textarea {
+    width: 100%; font: inherit; font-size: 13px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+  }
+  textarea { resize: vertical; min-height: 60px; font-family: ui-monospace, "SF Mono", monospace; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+
+  .shot { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: none; background: #000; }
+  .shot.show { display: block; }
+  .shot img { width: 100%; display: block; }
+  .shot .bar { display: flex; gap: 8px; padding: 8px; background: var(--panel2); align-items: center; }
+  .shot .bar span { font-size: 11px; color: var(--muted); flex: 1; }
+
+  .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  .app {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 8px; text-align: center; cursor: pointer; transition: background .15s, transform .1s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .app:hover { background: #202838; transform: translateY(-1px); }
+  .app .icon { font-size: 22px; }
+  .app .name { font-size: 11px; color: var(--muted); }
+
+  .perm { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; background: var(--panel); }
+  .perm .name { font-family: ui-monospace, "SF Mono", monospace; font-size: 12px; }
+  .perm .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+  .tag.low { background: rgba(63,185,80,.15); color: var(--green); }
+  .tag.med { background: rgba(210,153,34,.15); color: var(--yellow); }
+  .tag.high { background: rgba(248,81,73,.15); color: var(--red); }
+  .granted { color: var(--green); font-size: 11px; font-weight: 700; }
+
+  .statusline {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-top: 22px; font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .statusline code { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #1f6feb; color: white; font-size: 13px; font-weight: 600;
+    padding: 10px 18px; border-radius: 8px; opacity: 0; transition: all .25s; z-index: 50; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--red); }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🖥 Computer.js Control Panel</h1>
+    <span class="badge off" id="connBadge">connecting…</span>
+    <span class="spacer"></span>
+    <button type="button" id="connectBtn" class="primary">Connect</button>
+    <button type="button" id="grantBtn" class="green">Grant all</button>
+    <button type="button" id="revokeBtn" class="danger">Revoke</button>
+  </header>
+
+  <section id="permSection">
+    <h2>Permissions</h2>
+    <div id="perms"></div>
+  </section>
+
+  <section>
+    <h2>📸 Screenshot studio</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Capture</h3>
+        <div class="row">
+          <button type="button" data-run="cap-screen" class="primary">Full screen</button>
+          <button type="button" data-run="cap-window">Front window</button>
+        </div>
+        <p class="hint">Requires Screen Recording permission. Captures are processed on your Mac and never leave it.</p>
+        <div class="shot" id="shot"><div class="bar"><span id="shotMeta"></span><button type="button" id="saveShot" class="small">⬇ Save PNG</button><button type="button" id="copyShot" class="small">Copy image</button></div><img id="shotImg" alt="capture" /></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>📋 Clipboard center</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Read clipboard</h3>
+        <div class="row">
+          <button type="button" data-run="clip-read">Read current</button>
+          <button type="button" id="saveClip">Save to file</button>
+        </div>
+        <textarea id="clipOut" placeholder="Clipboard contents appear here…"></textarea>
+        <p class="hint">Reading clipboard is a strong permission — the native dialog will ask first.</p>
+      </div>
+      <div class="card">
+        <h3>Write to clipboard</h3>
+        <textarea id="clipIn" placeholder="Type text to copy to your Mac's clipboard…"></textarea>
+        <div class="row">
+          <button type="button" data-run="clip-write" class="primary">Copy to clipboard</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>🚀 App launcher</h2>
+    <div class="card">
+      <div class="apps" id="appGrid"></div>
+      <div style="margin-top:12px">
+        <label for="appName">Open any app (name or bundle id)</label>
+        <input type="text" id="appName" placeholder="e.g. Photoshop, com.apple.Safari" />
+        <div class="row"><button type="button" data-run="open-app">Open</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>📁 Files &amp; folders</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Reveal in Finder</h3>
+        <input type="text" id="revealPath" placeholder="~/Downloads/report.pdf" />
+        <div class="row"><button type="button" data-run="reveal">Reveal</button></div>
+      </div>
+      <div class="card">
+        <h3>Open with default app</h3>
+        <input type="text" id="openPath" placeholder="~/Desktop/screenshot.png" />
+        <div class="row"><button type="button" data-run="open-path">Open</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>⌨️ Type &amp; shortcuts</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Type into frontmost app</h3>
+        <textarea id="typeText" placeholder="This text will be typed into whatever app is focused on your Mac…"></textarea>
+        <div class="row"><button type="button" data-run="type" class="primary">Type now</button></div>
+      </div>
+      <div class="card">
+        <h3>System shortcuts</h3>
+        <div class="row">
+          <button type="button" data-run="hotkey-safari">⌘ ⇥ next app</button>
+          <button type="button" data-run="hotkey-spotlight">⌘ Space</button>
+          <button type="button" data-run="hotkey-copy">⌘ C</button>
+          <button type="button" data-run="hotkey-paste">⌘ V</button>
+          <button type="button" data-run="hotkey-save">⌘ S</button>
+        </div>
+        <p class="hint">Presses real key combinations on your Mac via Accessibility.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="statusline">
+    <span>Runtime host:</span><code id="hostInfo">detecting…</code>
+    <span>·</span>
+    <span>All actions run on <b>your</b> computer — nothing is uploaded.</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sdk/dist/computer.iife.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const ALL_CAPS = [
+    "screen.capture", "clipboard.read", "clipboard.write",
+    "mouse.move", "mouse.click", "mouse.scroll",
+    "keyboard.type", "keyboard.press", "keyboard.hotkey",
+    "apps.open", "files.reveal", "files.open",
+  ];
+  const RISK = {
+    "screen.capture":"med", "clipboard.read":"med", "clipboard.write":"med",
+    "mouse.move":"high", "mouse.click":"high", "mouse.scroll":"high",
+    "keyboard.type":"high", "keyboard.press":"high", "keyboard.hotkey":"high",
+    "apps.open":"low", "files.reveal":"low", "files.open":"low",
+  };
+  const APPS = [
+    { name: "Finder", bundle: "com.apple.finder", icon: "📁" },
+    { name: "Safari", bundle: "com.apple.Safari", icon: "🧭" },
+    { name: "Chrome", bundle: "com.google.Chrome", icon: "🌐" },
+    { name: "Mail", bundle: "com.apple.mail", icon: "✉️" },
+    { name: "Notes", bundle: "com.apple.Notes", icon: "📝" },
+    { name: "Calendar", bundle: "com.apple.iCal", icon: "📅" },
+    { name: "Music", bundle: "com.apple.Music", icon: "🎵" },
+    { name: "Terminal", bundle: "com.apple.Terminal", icon: "⌨️" },
+    { name: "Photos", bundle: "com.apple.Photos", icon: "🖼️" },
+    { name: "Calculator", bundle: "com.apple.calculator", icon: "🧮" },
+  ];
+
+  const WS_HOST = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+    ? `ws://${location.hostname || "127.0.0.1"}:8787/ws`
+    : "ws://127.0.0.1:8787/ws";
+  $("hostInfo").textContent = `${location.hostname || "this device"} → ${WS_HOST}`;
+
+  // ---- toast ----
+  let toastTimer;
+  function toast(msg, isErr = false, ms = 2600) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.toggle("err", isErr);
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+  }
+
+  // ---- connection ----
+  async function connect() {
+    if (window.computer.isConnected) return true;
+    try { await window.computer.connect({ url: WS_HOST }); return true; }
+    catch { return false; }
+  }
+  function setBadge(state) {
+    const b = $("connBadge");
+    b.className = "badge" + (state === "on" ? "" : state === "off" ? " off" : " work");
+    b.textContent = state === "on" ? "● runtime connected" : state === "off" ? "○ runtime offline" : "… connecting";
+  }
+
+  $("connectBtn").addEventListener("click", async () => {
+    setBadge("work");
+    if (await connect()) { setBadge("on"); toast("Runtime connected", false, 1800); }
+    else { setBadge("off"); toast("Runtime not found. Start the Computer.js app on this Mac.", true); }
+  });
+  window.computer.connect ? null : null;
+  connect().then(ok => setBadge(ok ? "on" : "off")).catch(() => setBadge("off"));
+  window.computer.onStatusChange = () => {};
+
+  // ---- permissions ----
+  function renderPerms(granted) {
+    const root = $("perms");
+    root.innerHTML = "";
+    for (const cap of ALL_CAPS) {
+      const row = document.createElement("div"); row.className = "perm";
+      const left = document.createElement("span"); left.className = "name"; left.textContent = cap;
+      const right = document.createElement("span");
+      const tag = document.createElement("span"); tag.className = "tag " + RISK[cap]; tag.textContent = RISK[cap];
+      right.appendChild(tag);
+      if (granted.includes(cap)) { const g = document.createElement("span"); g.className = "granted"; g.textContent = " ✓"; right.appendChild(g); }
+      row.appendChild(left); row.appendChild(right); root.appendChild(row);
+    }
+  }
+  async function refreshPerms() {
+    if (!window.computer.isConnected) { renderPerms([]); return; }
+    try { const s = await window.computer.permissions.query(); renderPerms(s.capabilities); }
+    catch { renderPerms([]); }
+  }
+
+  $("grantBtn").addEventListener("click", async () => {
+    if (!(await connect())) return toast("Runtime not found", true);
+    try {
+      const s = await window.computer.permissions.request(ALL_CAPS);
+      renderPerms(s.capabilities); toast("Permissions granted");
+    } catch (e) { toast("Grant failed: " + e.message, true); }
+  });
+  $("revokeBtn").addEventListener("click", async () => {
+    if (!(await connect())) return toast("Runtime not found", true);
+    await window.computer.permissions.revoke();
+    renderPerms([]); $("shot").classList.remove("show");
+    toast("All permissions revoked");
+  });
+
+  // ---- screenshot ----
+  let lastShot = null;
+  async function capture(target) {
+    if (!(await connect())) return toast("Runtime not found", true);
+    try {
+      const shot = await window.computer.screen.capture({ target });
+      lastShot = shot;
+      $("shotImg").src = "data:image/png;base64," + shot.data;
+      $("shotMeta").textContent = `${shot.width}×${shot.height} PNG · ${Math.round(shot.data.length / 1024)} KiB on wire`;
+      $("shot").classList.add("show");
+      toast(`Captured ${target}`);
+    } catch (e) {
+      toast("Capture failed: " + e.message, true, 4000);
+    }
+  }
+  $("saveShot").addEventListener("click", () => {
+    if (!lastShot) return;
+    const a = document.createElement("a");
+    a.href = "data:image/png;base64," + lastShot.data;
+    a.download = `computerjs-${Date.now()}.png`;
+    a.click();
+    toast("PNG saved to Downloads");
+  });
+  $("copyShot").addEventListener("click", async () => {
+    if (!lastShot) return;
+    try {
+      const blob = await (await fetch($("shotImg").src)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast("Image copied to clipboard");
+    } catch { toast("Copy failed", true); }
+  });
+
+  // ---- actions ----
+  const actions = {
+    "cap-screen": () => capture("screen"),
+    "cap-window": () => capture("window"),
+    "clip-read": async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      try { const r = await window.computer.clipboard.read(); $("clipOut").value = r.text; toast("Clipboard read"); }
+      catch (e) { toast("Read failed: " + e.message, true); }
+    },
+    "clip-write": async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      try { await window.computer.clipboard.write({ text: $("clipIn").value }); toast("Copied to your Mac's clipboard"); }
+      catch (e) { toast("Write failed: " + e.message, true); }
+    },
+    "open-app": async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      const v = $("appName").value.trim();
+      if (!v) return;
+      try { const r = await window.computer.apps.open({ id_or_path: v }); toast(`Opened ${r.opened} (${r.via})`); }
+      catch (e) { toast("Open failed: " + e.message, true); }
+    },
+    "reveal": async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      try { await window.computer.files.reveal({ path: $("revealPath").value || "~" }); toast("Revealed in Finder"); }
+      catch (e) { toast("Reveal failed: " + e.message, true); }
+    },
+    "open-path": async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      try { await window.computer.files.open({ path: $("openPath").value || "~" }); toast("Opened"); }
+      catch (e) { toast("Open failed: " + e.message, true); }
+    },
+    "type": async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      try { await window.computer.keyboard.type({ text: $("typeText").value }); toast("Typed"); }
+      catch (e) { toast("Type failed: " + e.message, true); }
+    },
+    "hotkey-safari": () => hotkey(["META", "TAB"]),
+    "hotkey-spotlight": () => hotkey(["META", "SPACE"]),
+    "hotkey-copy": () => hotkey(["META", "C"]),
+    "hotkey-paste": () => hotkey(["META", "V"]),
+    "hotkey-save": () => hotkey(["META", "S"]),
+  };
+  async function hotkey(keys) {
+    if (!(await connect())) return toast("Runtime not found", true);
+    try { await window.computer.keyboard.hotkey({ keys }); toast(`Pressed ${keys.join("+")}`); }
+    catch (e) { toast("Hotkey failed: " + e.message, true); }
+  }
+
+  document.querySelectorAll("[data-run]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try { await actions[btn.dataset.run](); }
+      catch (e) { toast(String(e.message || e), true); }
+      finally { btn.disabled = false; }
+    });
+  });
+
+  // ---- app grid ----
+  const grid = $("appGrid");
+  for (const app of APPS) {
+    const b = document.createElement("div"); b.className = "app";
+    b.innerHTML = `<span class="icon">${app.icon}</span><span class="name">${app.name}</span>`;
+    b.title = app.bundle;
+    b.addEventListener("click", async () => {
+      if (!(await connect())) return toast("Runtime not found", true);
+      try { const r = await window.computer.apps.open({ id_or_path: app.bundle }); toast(`Opened ${app.name}`); }
+      catch (e) { toast("Open failed: " + e.message, true); }
+    });
+    grid.appendChild(b);
+  }
+
+  $("saveClip").addEventListener("click", () => {
+    const text = $("clipOut").value;
+    if (!text) return toast("Clipboard is empty", true);
+    const a = document.createElement("a");
+    a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(text);
+    a.download = `clipboard-${Date.now()}.txt`;
+    a.click();
+    toast("Clipboard saved to Downloads");
+  });
+
+  renderPerms([]);
+  setInterval(refreshPerms, 5000);
+</script>
+</body>
+</html>
