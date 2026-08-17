@@ -1,0 +1,17 @@
+{
+  "name": "@computerjs/sdk",
+  "version": "0.1.0-milestone1",
+  "description": "Computer.js Web SDK - call real computer capabilities (screen, mouse, keyboard, apps, files) from a webpage, with user approval",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/computer.js && esbuild src/browser.ts --bundle --format=iife --outfile=dist/computer.iife.js && tsc --emitDeclarationOnly --outDir dist",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}

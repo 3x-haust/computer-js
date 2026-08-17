@@ -1,0 +1,10 @@
+node_modules/
+__pycache__/
+*.pyc
+grants.db
+.DS_Store
+.omo/
+
+# private strategy docs (not part of the public project)
+computer-js-name-and-implementation-guide.md
+web-os-computer-runtime-platform.md
