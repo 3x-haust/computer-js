@@ -1,20 +1,20 @@
 # Computer.js Runtime (macOS) — Milestone 1
 
-This small local server lets websites call real macOS features (screen capture, mouse, keyboard, apps, files) — after you approve each capability.
+This small local server lets websites call real macOS features (screen capture, mouse, keyboard, apps, files) — after you approve each capability. It also serves the demo page itself, so you need nothing else.
 
 ## Install (one time)
 
 1. Double-click **Install.command** — it creates a Python virtualenv and installs dependencies.
    (Requires Python 3 from https://www.python.org/downloads/)
-2. The first time you start it, macOS asks for **Accessibility** and **Screen Recording**:
+2. macOS will ask for **Accessibility** and **Screen Recording**:
    System Settings → Privacy & Security → enable it for your terminal.
 
 ## Run
 
-1. Double-click **Start Runtime.command** — it listens on `ws://127.0.0.1:8787/ws`.
-2. Open the live demo at https://3x-haust.github.io/computer-js/examples/demo.html
-   (or any site using the Computer.js SDK).
-3. Click **Connect**, then **Grant everything**, approve the native dialog — done.
+1. Double-click **Start Runtime.command** — it starts the server and opens the demo
+   at **http://127.0.0.1:8787/** in your browser.
+2. In the demo, click **Connect**, then **Grant everything**, approve the native dialog — done.
+3. Try: capture your screen, move your mouse, type text, open Safari.
 
 ## What it does
 

@@ -429,9 +429,10 @@ async def ws_handler(request):
     origin = request.headers.get("Origin", "")
     runtime: Runtime = request.app["runtime"]
 
-    # Origin policy: reject disallowed origins. Empty allow list = allow all
-    # (localhost development).
-    if runtime.allow_origins and origin not in runtime.allow_origins:
+    # Origin policy: browsers always send an Origin header on WebSocket; a
+    # missing Origin means a non-browser local client (curl, SDK in Node).
+    # Enforce the allowlist only against explicit browser origins.
+    if runtime.allow_origins and origin and origin not in runtime.allow_origins:
         log.warning("Rejecting origin %s", origin)
         return web.Response(status=403, text="origin not allowed")
 
@@ -469,11 +470,28 @@ async def ws_handler(request):
     return ws
 
 
-def build_app(runtime: Runtime):
+def build_app(runtime: Runtime, demo_dir=None, sdk_dir=None):
     app = web.Application()
     app["runtime"] = runtime
     app.router.add_get("/ws", ws_handler)
     app.router.add_get("/health", lambda r: web.json_response({"ok": True}))
+
+    # Serve the demo site and SDK bundle so users only need the Runtime:
+    #   http://127.0.0.1:8787/  → demo page (local-to-local, no browser LNA blocks)
+    base = Path(__file__).resolve().parent
+    demo_dir = demo_dir or next(
+        (p for p in [base / "examples", base.parent / "examples"] if (p / "demo.html").exists()),
+        None,
+    )
+    sdk_dir = sdk_dir or next(
+        (p for p in [base / "sdk" / "dist", base.parent / "sdk" / "dist"] if p.is_dir()),
+        None,
+    )
+    if demo_dir:
+        app.router.add_get("/", lambda r: web.FileResponse(demo_dir / "demo.html"))
+        app.router.add_static("/examples/", demo_dir)
+    if sdk_dir:
+        app.router.add_static("/sdk/dist/", sdk_dir)
     return app
 
 
