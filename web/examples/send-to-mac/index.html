@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Send to Mac — Computer.js example</title>
+<style>
+  :root{--bg:#0b0f17;--panel:#131a26;--panel2:#0f1722;--border:#21304d;--text:#e8eef7;--muted:#7d8aa3;--accent:#4f9dff;--green:#3fb950;--red:#f85149;--yellow:#d29922}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"SF Pro Text",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+  .wrap{max-width:760px;margin:0 auto;padding:40px 22px 80px}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:26px;letter-spacing:-.02em}
+  .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.4)}
+  .badge.on{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.4)}
+  .sub{color:var(--muted);margin:8px 0 26px;font-size:15px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .card h2{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  textarea{width:100%;font:inherit;font-size:14px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:11px 12px;resize:vertical;min-height:110px;font-family:ui-monospace,monospace}
+  input[type=text]{width:100%;font:inherit;font-size:14px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  .btn{font:inherit;font-weight:600;font-size:14px;color:var(--text);background:#1c2740;border:1px solid var(--border);border-radius:9px;padding:10px 16px;cursor:pointer;margin-top:12px}
+  .btn:hover:not(:disabled){background:#253354}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:var(--accent);border-color:var(--accent)}
+  .btn.primary:hover:not(:disabled){background:#64abff}
+  .btn.green{background:#238636;border-color:#238636}
+  .btn.green:hover:not(:disabled){background:#2ea043}
+  .hint{font-size:11px;color:var(--muted);margin-top:8px}
+  .shot{margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;display:none;background:#000}
+  .shot.show{display:block}
+  .shot img{width:100%;display:block}
+  .shot .bar{padding:8px 10px;background:var(--panel2);display:flex;gap:8px;align-items:center}
+  .shot .bar span{flex:1;font-size:11px;color:var(--muted)}
+  .shot .bar button{font:inherit;font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+  .status{margin-top:18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:13px 15px;font-size:13px;color:var(--muted);display:none}
+  .status.show{display:block}
+  .status .ok{color:var(--green);font-weight:600}
+  .status .err{color:var(--red);font-weight:600}
+  .quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .scheme{font-size:12px;color:var(--muted);margin-top:10px}
+  .scheme code{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📤 Send to Mac</h1>
+    <span class="badge" id="badge">connecting…</span>
+  </header>
+  <p class="sub">A real everyday tool: push text and screen captures from any web page straight to your computer. Copy, open, and reveal without emailing yourself.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>✍️ Send text</h2>
+      <textarea id="text" placeholder="Paste anything — a message, a link, a code snippet…"></textarea>
+      <div class="quick">
+        <button type="button" class="btn primary" id="sendClip">Copy to Mac clipboard</button>
+        <button type="button" class="btn" id="sendApp">Open in app…</button>
+      </div>
+      <div class="scheme">Tip: also triggerable from any site via <code>computer.clipboard.write()</code></div>
+    </div>
+
+    <div class="card">
+      <h2>📸 Send a screenshot</h2>
+      <button type="button" class="btn green" id="capture">Capture screen / window</button>
+      <div class="shot" id="shot"><div class="bar"><span id="shotMeta"></span><button type="button" id="dlShot">⬇ Download</button><button type="button" id="revealShot">Reveal in Finder</button></div><img id="shotImg" alt="capture"/></div>
+      <p class="hint">The captured image is processed on your Mac and never uploads anywhere.</p>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script src="../../sdk/dist/computer.iife.js"></script>
+<script>
+  const $ = i => document.getElementById(i);
+  const WS = "ws://127.0.0.1:8787/ws";
+  let shot = null;
+  const status = $("status");
+
+  async function connect(){
+    if (window.computer.isConnected) return true;
+    try { await window.computer.connect({url:WS}); return true; } catch { return false; }
+  }
+  function setBadge(on){
+    $("badge").className = "badge" + (on?" on":"");
+    $("badge").textContent = on ? "● computer connected" : "○ computer offline";
+  }
+  function say(html, isErr){
+    status.innerHTML = `<span class="${isErr?'err':'ok'}">${html}</span>`;
+    status.classList.add("show");
+  }
+  async function init(){
+    setBadge(await connect());
+  }
+
+  $("sendClip").addEventListener("click", async () => {
+    const text = $("text").value.trim();
+    if(!text) return say("Type or paste something first.", true);
+    if(!(await connect())) return say("Computer not found. Start the Computer.js app on your Mac.", true);
+    try {
+      await window.computer.permissions.request(["clipboard.write"]);
+      const r = await window.computer.clipboard.write({ text });
+      say(`✓ Copied <b>${r.written} characters</b> to your Mac's clipboard. Paste anywhere (⌘V).`);
+    } catch(e){ say("Could not write to clipboard: "+e.message, true); }
+  });
+
+  // Open the text in a specific app (Notes, TextEdit, etc.)
+  $("sendApp").addEventListener("click", async () => {
+    const text = $("text").value.trim();
+    if(!(await connect())) return say("Computer not found.", true);
+    try {
+      await window.computer.permissions.request(["apps.open"]);
+      const r = await window.computer.apps.open({ id_or_path: "com.apple.TextEdit" });
+      say(`✓ Opened <b>${r.opened}</b> — paste with ⌘V.`);
+    } catch(e){ say("Open failed: "+e.message, true); }
+  });
+
+  const captureTarget = "screen";
+  $("capture").addEventListener("click", async () => {
+    if(!(await connect())) return say("Computer not found.", true);
+    try {
+      await window.computer.permissions.request(["screen.capture"]);
+      shot = await window.computer.screen.capture({ target: captureTarget });
+      $("shotImg").src = "data:image/png;base64," + shot.data;
+      $("shotMeta").textContent = `${shot.width}×${shot.height} · ${Math.round(shot.data.length/1024)} KiB`;
+      $("shot").classList.add("show");
+      $("dlShot").textContent = "⬇ Download ("+ (shot.width>1920?"Retina ":"") + Math.round(shot.data.length/1024)+"KiB)";
+      say("✓ Screen captured on your Mac.");
+    } catch(e){ say("Capture failed: "+e.message, true); }
+  });
+
+  $("dlShot").addEventListener("click", () => {
+    if(!shot) return;
+    const a=document.createElement("a");
+    a.href="data:image/png;base64,"+shot.data;
+    a.download=`send-to-mac-${Date.now()}.png`;
+    a.click();
+    say("✓ Downloaded to your browser's Downloads.");
+  });
+
+  $("revealShot").addEventListener("click", async () => {
+    if(!shot) return;
+    if(!(await connect())) return say("Computer not found.", true);
+    try {
+      await window.computer.permissions.request(["files.reveal"]);
+      // Reveal via Finder — use the Desktop as a convenience target.
+      await window.computer.files.reveal({ path: "~/Desktop" });
+      say("✓ Opened your Desktop in Finder (see the saved file or drag to save).");
+    } catch(e){ say("Reveal failed: " + e.message, true); }
+  });
+
+  init();
+</script>
+</body>
+</html>

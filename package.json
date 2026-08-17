@@ -1,14 +1,12 @@
 {
   "name": "computer-js",
   "private": true,
-  "version": "0.1.0-milestone1",
+  "version": "0.2.0",
   "description": "Computer.js — call real macOS capabilities from a webpage with user approval",
   "workspaces": ["sdk"],
   "scripts": {
-    "runtime": "python3 runtime/runtime.py --port 8787",
-    "demo": "python3 -m http.server 3000",
     "build:sdk": "npm --workspace sdk run build",
-    "test:runtime": "python3 runtime/smoke_test.py",
-    "test:sdk": "cd sdk && rm -f ../runtime/grants.db && node e2e.test.mjs"
+    "build:native": "cd native && swift build -c release && bash Scripts/make_app.sh && bash Scripts/make_dmg.sh",
+    "test:sdk": "cd sdk && COMPUTER_RUNTIME_AUTO_APPROVE=1 node e2e.test.mjs"
   }
 }
