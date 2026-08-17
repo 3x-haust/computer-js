@@ -47,8 +47,7 @@ Every capability is **denied until you grant it**. Strong ones (screen, mouse, k
 ```
 native/    Swift runtime (Package.swift) → build script → .app → .dmg
 sdk/       TypeScript Web SDK (@computerjs/sdk) → ESM + browser IIFE bundle
-web/       Control panel (index.html) + practical examples served by the Runtime at :8788
-  └─ examples/mac-bridge/    “MacBridge” — open apps, capture screen, bridge clipboard
+web/       Control panel (index.html) served by the Runtime at :8788
 ```
 
 ## Building the app & DMG
