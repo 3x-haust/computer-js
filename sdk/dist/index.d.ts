@@ -7,7 +7,7 @@
  *   await computer.permissions.request(["screen.capture", "mouse.move"]);
  *   const shot = await computer.screen.capture();
  */
-import type { AppsOpenParams, Capability, ClipboardReadResult, ClipboardWriteResult, FileResult, GrantState, KeyboardHotkeyParams, KeyboardTypeParams, MouseClickParams, MouseMoveParams, MouseScrollParams, RuntimeStatusResult, ScreenshotResult } from "./types";
+import type { AppsOpenParams, Capability, ClipboardReadResult, ClipboardWriteResult, FileResult, GrantState, KeyboardHotkeyParams, KeyboardTypeParams, MouseClickParams, MouseMoveParams, MouseScrollParams, RuntimeStatusResult, ScreenshotResult, SystemInfo } from "./types";
 export * from "./types";
 export declare const VERSION = "0.1.0-milestone1";
 export declare const DEFAULT_URL = "ws://127.0.0.1:8787/ws";
@@ -34,6 +34,17 @@ export declare class ComputerClient {
     status(): Promise<RuntimeStatusResult>;
     private callTyped;
     private requireTransport;
+    readonly system: {
+        /** Live system diagnostics (model, OS, memory, uptime). */
+        info: () => Promise<SystemInfo>;
+        /** Esc actions: lock the screen or sleep the display. */
+        control: (params: {
+            action: "lock" | "sleep";
+        }) => Promise<{
+            action: string;
+            ok: boolean;
+        }>;
+    };
     readonly permissions: {
         /** List the capabilities currently granted to this origin. */
         query: () => Promise<GrantState>;

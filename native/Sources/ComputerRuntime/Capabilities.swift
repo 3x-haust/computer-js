@@ -9,6 +9,9 @@ enum Capabilities {
     /// Calls the native implementation for a method. Throws RPCError on failure.
     static func call(method: String, params: [String: Any]) throws -> [String: Any] {
         switch method {
+        case "runtime.status": return runtimeStatus()
+        case "system.info": return systemInfo()
+        case "system.control": return try systemControl(params)
         case "screen.capture": return try captureScreen(params)
         case "mouse.move": return try mouseMove(params)
         case "mouse.click": return try mouseClick(params)
@@ -26,7 +29,71 @@ enum Capabilities {
         }
     }
 
-    // MARK: Screen (ScreenCaptureKit)
+    // MARK: Runtime & System
+
+    private static func runtimeStatus() -> [String: Any] {
+        return [
+            "server": "computer-runtime",
+            "version": "0.2.0-native",
+            "os": "macos",
+            "status": "running",
+            "transport": "local-ws",
+        ]
+    }
+
+    /// Useful system diagnostics shown in the control panel.
+    private static func systemInfo() -> [String: Any] {
+        let env = ProcessInfo.processInfo
+        let mem = env.physicalMemory
+        // Model name
+        let model = systemCommand("/usr/sbin/sysctl -n hw.model") ?? "Mac"
+        let chip = env.operatingSystemVersionString
+        // Uptime
+        let uptime = env.systemUptime
+        let days = Int(uptime) / 86400
+        let hours = (Int(uptime) % 86400) / 3600
+        let mins = (Int(uptime) % 3600) / 60
+        let host = Host.current().localizedName ?? ""
+        return [
+            "model": model,
+            "host": host,
+            "chip": env.processorCount > 16 ? "high-core-count" : "\(env.processorCount)-core",
+            "osVersion": chip,
+            "architecture": systemCommand("/usr/bin/uname -m") ?? "unknown",
+            "memoryGB": Double(mem) / 1_073_741_824.0,
+            "processorCount": env.processorCount,
+            "uptime": "\(days)d \(hours)h \(mins)m",
+        ]
+    }
+
+    /// Lock the screen or sleep the display — useful ESC actions.
+    private static func systemControl(_ params: [String: Any]) throws -> [String: Any] {
+        let action = params["action"] as? String ?? "lock"
+        switch action {
+        case "lock":
+            try? NSWorkspace.shared.open(URL(string: "screen-lock")!)
+            return ["action": "lock", "ok": true]
+        case "sleep":
+            let script = "tell application \"System Events\" to sleep"
+            _ = systemCommand("osascript -e '\(script)'")
+            return ["action": "sleep", "ok": true]
+        default:
+            throw RPCError.code(-32602, "Unknown system.control action: \(action) (lock|sleep)")
+        }
+    }
+
+    private static func systemCommand(_ command: String) -> String? {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", command]
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do { try process.run() } catch { return nil }
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     private static func captureScreen(_ params: [String: Any]) throws -> [String: Any] {
         let target = params["target"] as? String ?? "screen"

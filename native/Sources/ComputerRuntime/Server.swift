@@ -85,6 +85,8 @@ struct CapabilityInfo {
 
 let CAPABILITIES: [String: CapabilityInfo] = [
     "runtime.status": .init(risk: "low", strong: false, needsAccessibility: false, needsScreenRecording: false),
+    "system.info": .init(risk: "low", strong: false, needsAccessibility: false, needsScreenRecording: false),
+    "system.control": .init(risk: "med", strong: true, needsAccessibility: false, needsScreenRecording: false),
     "permissions.query": .init(risk: "low", strong: false, needsAccessibility: false, needsScreenRecording: false),
     "permissions.request": .init(risk: "low", strong: false, needsAccessibility: false, needsScreenRecording: false),
     "permissions.revoke": .init(risk: "low", strong: false, needsAccessibility: false, needsScreenRecording: false),

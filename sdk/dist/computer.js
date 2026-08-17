@@ -184,6 +184,15 @@ var ComputerClient = class {
     return this.transport;
   }
   // ---------------------------------------------------------------------
+  // System
+  // ---------------------------------------------------------------------
+  system = {
+    /** Live system diagnostics (model, OS, memory, uptime). */
+    info: () => this.callTyped("system.info"),
+    /** Esc actions: lock the screen or sleep the display. */
+    control: (params) => this.callTyped("system.control", params)
+  };
+  // ---------------------------------------------------------------------
   // Permissions (grant gates every capability)
   // ---------------------------------------------------------------------
   permissions = {

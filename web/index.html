@@ -159,6 +159,35 @@
   </section>
 
   <section>
+    <h2>💻 System dashboard</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Live diagnostics</h3>
+        <div class="sysgrid" id="sysInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="color:var(--muted);font-size:12px;">Model</div><div id="sys-model" style="font-size:12px;">—</div>
+          <div style="color:var(--muted);font-size:12px;">Host</div><div id="sys-host" style="font-size:12px;">—</div>
+          <div style="color:var(--muted);font-size:12px;">Chip</div><div id="sys-chip" style="font-size:12px;">—</div>
+          <div style="color:var(--muted);font-size:12px;">Architecture</div><div id="sys-arch" style="font-size:12px;">—</div>
+          <div style="color:var(--muted);font-size:12px;">macOS</div><div id="sys-os" style="font-size:12px;">—</div>
+          <div style="color:var(--muted);font-size:12px;">Memory</div><div id="sys-mem" style="font-size:12px;">—</div>
+          <div style="color:var(--muted);font-size:12px;">Uptime</div><div id="sys-up" style="font-size:12px;">—</div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button type="button" id="sysRefresh" class="small">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Quick actions</h3>
+        <div class="row">
+          <button type="button" data-run="sys-lock" class="danger">🔒 Lock screen</button>
+          <button type="button" data-run="sys-sleep">😴 Sleep</button>
+        </div>
+        <p class="hint">Lock and Sleep are medium-risk actions — a native dialog asks first.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <h2>🚀 App launcher</h2>
     <div class="card">
       <div class="apps" id="appGrid"></div>
@@ -226,12 +255,14 @@
     "mouse.move", "mouse.click", "mouse.scroll",
     "keyboard.type", "keyboard.press", "keyboard.hotkey",
     "apps.open", "files.reveal", "files.open",
+    "system.info", "system.control",
   ];
   const RISK = {
     "screen.capture":"med", "clipboard.read":"med", "clipboard.write":"med",
     "mouse.move":"high", "mouse.click":"high", "mouse.scroll":"high",
     "keyboard.type":"high", "keyboard.press":"high", "keyboard.hotkey":"high",
     "apps.open":"low", "files.reveal":"low", "files.open":"low",
+    "system.info":"low", "system.control":"med",
   };
   const APPS = [
     { name: "Finder", bundle: "com.apple.finder", icon: "📁" },
@@ -276,11 +307,11 @@
 
   $("connectBtn").addEventListener("click", async () => {
     setBadge("work");
-    if (await connect()) { setBadge("on"); toast("Runtime connected", false, 1800); }
+    if (await connect()) { setBadge("on"); toast("Runtime connected", false, 1800); loadSysInfo(); }
     else { setBadge("off"); toast("Runtime not found. Start the Computer.js app on this Mac.", true); }
   });
   window.computer.connect ? null : null;
-  connect().then(ok => setBadge(ok ? "on" : "off")).catch(() => setBadge("off"));
+  connect().then(ok => { setBadge(ok ? "on" : "off"); if (ok) loadSysInfo(); }).catch(() => setBadge("off"));
   window.computer.onStatusChange = () => {};
 
   // ---- permissions ----
@@ -388,6 +419,8 @@
     "hotkey-safari": () => hotkey(["META", "TAB"]),
     "hotkey-spotlight": () => hotkey(["META", "SPACE"]),
     "hotkey-copy": () => hotkey(["META", "C"]),
+    "sys-lock": () => sysControl("lock"),
+    "sys-sleep": () => sysControl("sleep"),
     "hotkey-paste": () => hotkey(["META", "V"]),
     "hotkey-save": () => hotkey(["META", "S"]),
   };
@@ -396,6 +429,28 @@
     try { await window.computer.keyboard.hotkey({ keys }); toast(`Pressed ${keys.join("+")}`); }
     catch (e) { toast("Hotkey failed: " + e.message, true); }
   }
+
+  // ---- system dashboard ----
+  async function sysControl(action) {
+    if (!(await connect())) return toast("Runtime not found", true);
+    try { await window.computer.system.control({ action }); toast(action === "lock" ? "Locking your screen…" : "Sleeping…"); }
+    catch (e) { toast(action + " failed: " + e.message, true); }
+  }
+
+  async function loadSysInfo() {
+    if (!window.computer.isConnected) return;
+    try {
+      const s = await window.computer.system.info();
+      $("sys-model").textContent = s.model || "—";
+      $("sys-host").textContent = s.host || "—";
+      $("sys-chip").textContent = s.chip + " · " + s.processorCount + " cores";
+      $("sys-arch").textContent = s.architecture || "—";
+      $("sys-os").textContent = (s.osVersion || "").replace("Version ", "macOS ");
+      $("sys-mem").textContent = Math.round(s.memoryGB) + " GB";
+      $("sys-up").textContent = s.uptime || "—";
+    } catch { /* not granted yet */ }
+  }
+  $("sysRefresh").addEventListener("click", loadSysInfo);
 
   document.querySelectorAll("[data-run]").forEach(btn => {
     btn.addEventListener("click", async () => {

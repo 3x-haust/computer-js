@@ -11,6 +11,16 @@ export interface RuntimeStatusResult {
     status: "running";
     transport: string;
 }
+export interface SystemInfo {
+    model: string;
+    host: string;
+    chip: string;
+    osVersion: string;
+    architecture: string;
+    memoryGB: number;
+    processorCount: number;
+    uptime: string;
+}
 export interface GrantState {
     origin: string;
     capabilities: Capability[];

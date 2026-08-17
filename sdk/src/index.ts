@@ -24,6 +24,7 @@ import type {
   MouseScrollParams,
   RuntimeStatusResult,
   ScreenshotResult,
+  SystemInfo,
 } from "./types";
 
 export * from "./types";
@@ -98,6 +99,20 @@ export class ComputerClient {
     }
     return this.transport;
   }
+
+  // ---------------------------------------------------------------------
+  // System
+  // ---------------------------------------------------------------------
+
+  readonly system = {
+    /** Live system diagnostics (model, OS, memory, uptime). */
+    info: (): Promise<SystemInfo> =>
+      this.callTyped<SystemInfo>("system.info"),
+
+    /** Esc actions: lock the screen or sleep the display. */
+    control: (params: { action: "lock" | "sleep" }): Promise<{ action: string; ok: boolean }> =>
+      this.callTyped<{ action: string; ok: boolean }>("system.control", params),
+  };
 
   // ---------------------------------------------------------------------
   // Permissions (grant gates every capability)
