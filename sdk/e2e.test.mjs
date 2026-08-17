@@ -19,6 +19,9 @@ function check(name, cond, detail) {
 const status = await computer.connect({ url: "ws://127.0.0.1:8787/ws" });
 check("connect+status", status.status === "running" && status.os === "macos", `${status.os} ${status.version}`);
 
+// 0. start from a clean grant state so assertions are deterministic
+await computer.permissions.revoke();
+
 // 2. permissions via the SDK
 const before = await computer.permissions.query();
 check("permissions.query", Array.isArray(before.capabilities), JSON.stringify(before));
