@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MacBridge — open anything on your Mac, from the web</title>
+<style>
+  :root{
+    --bg:#0a0e14;--panel:#11161f;--panel2:#0c111b;--border:#222b3a;
+    --text:#e7edf5;--muted:#8591a6;--accent:#5b8cff;--accent2:#7aa2ff;
+    --green:#3fb950;--red:#f85149;--yellow:#d29922;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);line-height:1.55;min-height:100vh}
+  .wrap{max-width:920px;margin:0 auto;padding:44px 24px 100px}
+
+  /* header */
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#8a6bff);display:flex;align-items:center;justify-content:center;font-size:18px}
+  h1{font-size:24px;letter-spacing:-.02em;font-weight:700}
+  h1 small{font-size:13px;color:var(--muted);font-weight:400;display:block;margin-top:2px}
+  .spacer{flex:1}
+  .badge{font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.4)}
+  .badge.on{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.4)}
+
+  /* tagline */
+  .tagline{color:var(--muted);font-size:15px;margin:6px 0 26px}
+
+  /* grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .card.full{grid-column:1/-1}
+  .card h2{font-size:15px;margin-bottom:13px;display:flex;align-items:center;gap:8px;color:var(--accent2)}
+  .card h2 .emoji{font-size:18px}
+  .hint{font-size:12px;color:var(--muted);margin-top:9px}
+
+  /* inputs */
+  input[type=text],textarea{width:100%;font:inherit;font-size:14px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 13px}
+  textarea{resize:vertical;min-height:86px;font-family:ui-monospace,"SF Mono",monospace}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  label{font-size:12px;color:var(--muted);display:block;margin:0 0 5px}
+
+  /* buttons */
+  .btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .btn{font:inherit;font-weight:600;font-size:13.5px;color:var(--text);background:#1b2333;border:1px solid var(--border);border-radius:9px;padding:9px 15px;cursor:pointer;transition:all .12s}
+  .btn:hover:not(:disabled){background:#243049;transform:translateY(-1px)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.p{background:var(--accent);border-color:var(--accent)}
+  .btn.p:hover:not(:disabled){background:var(--accent2)}
+  .btn.g{background:#238636;border-color:#238636}
+  .btn.danger{color:var(--red)}
+  .btn.sm{padding:6px 10px;font-size:12px}
+
+  /* app grid */
+  .apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:4px}
+  .app{background:var(--panel2);border:1px solid var(--border);border-radius:11px;padding:13px 6px;text-align:center;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .app:hover{background:#1d2638;transform:translateY(-2px);border-color:var(--accent)}
+  .app .ic{font-size:20px}
+  .app .nm{font-size:11px;color:var(--muted)}
+
+  /* status / toast */
+  .status{margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px 16px;font-size:13px;color:var(--muted);display:none}
+  .status.show{display:block;animation:fade .2s}
+  .status .ok{color:var(--green);font-weight:600}
+  .status .err{color:var(--red);font-weight:600}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+  /* shot */
+  .shot{margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:none;background:#000}
+  .shot.show{display:block}
+  .shot img{width:100%;display:block}
+  .shot .bar{padding:9px 12px;background:var(--panel2);display:flex;gap:9px;align-items:center}
+  .shot .bar span{flex:1;font-size:12px;color:var(--muted)}
+
+  /* sys */
+  .sys{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;font-size:13px}
+  .sys .k{color:var(--muted)}
+  .sys .v{font-weight:600}
+  .dot-status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-top:10px}
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--yellow);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="mark">⌘</div>
+      <h1>MacBridge<small>open anything on your Mac, from the browser</small></h1>
+    </div>
+    <span class="spacer"></span>
+    <span class="badge" id="badge">connecting…</span>
+  </header>
+
+  <p class="tagline">A believable real-world use of the Computer.js SDK: a website that opens apps, captures screens, and bridges your clipboard right on your computer — with your permission, every time.</p>
+
+  <div class="grid">
+    <!-- OPEN IN APP -->
+    <div class="card">
+      <h2><span class="emoji">🚀</span>Open in an app</h2>
+      <label for="openWhat">File, folder, or URL on your Mac</label>
+      <input type="text" id="openWhat" placeholder="/Users/you/Desktop/report.pdf  or  https://example.com" />
+      <div class="apps" id="apps"></div>
+      <div class="hint">Click an app to open it (or the path) there. “Reveal” shows the file in Finder.</div>
+    </div>
+
+    <!-- SEND TEXT -->
+    <div class="card">
+      <h2><span class="emoji">📋</span>Clipboard bridge</h2>
+      <label for="text">Text to place on your Mac's clipboard</label>
+      <textarea id="text" placeholder="Paste a message, a link, a code snippet…"></textarea>
+      <div class="btns">
+        <button type="button" class="btn p" id="sendClip">Copy ⇢ Mac clipboard</button>
+        <button type="button" class="btn" id="readClip">Read current</button>
+      </div>
+      <div class="hint">Copied text is ready to paste anywhere on your Mac (⌘V).</div>
+    </div>
+
+    <!-- SCREENSHOT -->
+    <div class="card">
+      <h2><span class="emoji">📸</span>Screenshot studio</h2>
+      <div class="btns">
+        <button type="button" class="btn g" id="capScreen">Full screen</button>
+        <button type="button" class="btn g" id="capWindow">Front window</button>
+      </div>
+      <div class="shot" id="shot">
+        <div class="bar"><span id="shotMeta"></span><button type="button" class="btn sm" id="dlShot">⬇ Save PNG</button></div>
+        <img id="shotImg" alt="capture" />
+      </div>
+      <div class="hint">Captured on your Mac, never uploaded. Good for bug reports or quick saving.</div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div class="card">
+      <h2><span class="emoji">💻</span>Your Mac at a glance</h2>
+      <div class="sys">
+        <div class="k">Machine</div><div class="v" id="sModel">—</div>
+        <div class="k">Chip</div><div class="v" id="sChip">—</div>
+        <div class="k">macOS</div><div class="v" id="sOs">—</div>
+        <div class="k">Memory</div><div class="v" id="sMem">—</div>
+      </div>
+      <div class="dot-status"><span class="pulse" id="pulse"></span><span id="sysDetail">waiting for connection…</span></div>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script src="../../sdk/dist/computer.iife.js"></script>
+<script>
+  const $ = i => document.getElementById(i);
+  const WS = "ws://127.0.0.1:8787/ws";
+  let shot = null;
+  const statusEl = $("status");
+
+  async function connect(){
+    if (window.computer.isConnected) return true;
+    try { await window.computer.connect({url:WS}); return true; } catch { return false; }
+  }
+  function badge(on){
+    $("badge").className = "badge" + (on?" on":"");
+    $("badge").textContent = on ? "● Mac connected" : "○ Mac offline";
+    $("pulse").style.background = on ? "var(--green)" : "var(--yellow)";
+  }
+  function say(html, err){
+    statusEl.innerHTML = `<span class="${err?'err':'ok'}">${html}</span>`;
+    statusEl.classList.add("show");
+  }
+  async function ensure(perm){
+    if (!(await connect())) { say("Mac not found. Start the Computer.js app.", true); return false; }
+    try { await window.computer.permissions.request([perm]); return true; }
+    catch(e){ say("Permission denied: "+e.message, true); return false; }
+  }
+
+  // --- quick app grid ---
+  const APPS = [
+    {n:"Safari",b:"com.apple.Safari",i:"🧭"},{n:"Chrome",b:"com.google.Chrome",i:"🌐"},
+    {n:"Finder",b:"com.apple.finder",i:"📁"},{n:"Mail",b:"com.apple.mail",i:"✉️"},
+    {n:"Notes",b:"com.apple.Notes",i:"📝"},{n:"Music",b:"com.apple.Music",i:"🎵"},
+    {n:"Numbers",b:"com.apple.Numbers",i:"🔢"},{n:"Terminal",b:"com.apple.Terminal",i:"⌨️"},
+  ];
+  const appGrid = $("apps");
+  APPS.forEach(a=>{
+    const el=document.createElement("div");el.className="app";
+    el.innerHTML=`<span class="ic">${a.i}</span><span class="nm">${a.n}</span>`;
+    el.title=a.b;
+    el.onclick=async()=>{
+      if(!(await ensure("apps.open"))) return;
+      try{ const r=await window.computer.apps.open({id_or_path:a.b}); say(`✓ Opened <b>${a.n}</b>`); }
+      catch(e){ say(e.message,true); }
+    };
+    appGrid.appendChild(el);
+  });
+
+  // --- open what (path/url) ---
+  $("openWhat").addEventListener("keydown", async e=>{ if(e.key==="Enter") await openCustom(); });
+  async function openCustom(){
+    const v=$("openWhat").value.trim();
+    if(!v) return;
+    if(!(await ensure("apps.open"))) return;
+    try{ const r=await window.computer.apps.open({id_or_path:v}); say(`✓ Opened <b>${r.opened}</b> via ${r.via}`); }
+    catch(e){ say(e.message,true); }
+  }
+
+  // --- clipboard ---
+  $("sendClip").addEventListener("click", async()=>{
+    const t=$("text").value.trim();
+    if(!t) return say("Type or paste something first.", true);
+    if(!(await ensure("clipboard.write"))) return;
+    try{ const r=await window.computer.clipboard.write({text:t}); say(`✓ Copied <b>${r.written} characters</b> to your Mac clipboard — paste with ⌘V.`); }
+    catch(e){ say(e.message,true); }
+  });
+  $("readClip").addEventListener("click", async()=>{
+    if(!(await ensure("clipboard.read"))) return;
+    try{ const r=await window.computer.clipboard.read(); $("text").value=r.text||"(empty)"; say("✓ Read current clipboard."); }
+    catch(e){ say(e.message,true); }
+  });
+
+  // --- screenshot ---
+  async function capture(target){
+    if(!(await ensure("screen.capture"))) return;
+    try{
+      shot=await window.computer.screen.capture({target});
+      $("shotImg").src="data:image/png;base64,"+shot.data;
+      $("shotMeta").textContent=`${shot.width}×${shot.height} · ${Math.round(shot.data.length/1024)} KiB`;
+      $("shot").classList.add("show");
+      say("✓ Screen captured on your Mac.");
+    }catch(e){ say(e.message,true); }
+  }
+  $("capScreen").onclick=()=>capture("screen");
+  $("capWindow").onclick=()=>capture("window");
+  $("dlShot").addEventListener("click",()=>{
+    if(!shot) return;
+    const a=document.createElement("a");
+    a.href="data:image/png;base64,"+shot.data;
+    a.download=`macbridge-${Date.now()}.png`;
+    a.click();
+  });
+
+  // --- system ---
+  async function sysInfo(){
+    if(!(await connect())){ $("sysDetail").textContent="Mac offline — start Computer.js."; return; }
+    try{
+      await window.computer.permissions.request(["system.info"]);
+      const s=await window.computer.system.info();
+      $("sModel").textContent=s.model||"—";
+      $("sChip").textContent=(s.chip||"—")+" · "+(s.processorCount||"")+" cores";
+      $("sOs").textContent=(s.osVersion||"—").replace("Version ","macOS ");
+      $("sMem").textContent=Math.round(s.memoryGB)+" GB · "+s.architecture;
+      $("sysDetail").textContent=`Uptime ${s.uptime} · ${s.host||"your Mac"}`;
+    }catch(e){ $("sysDetail").textContent="Could not read system info."; }
+  }
+
+  async function init(){
+    const ok=await connect();
+    badge(ok);
+    if(ok) sysInfo();
+  }
+  init();
+</script>
+</body>
+</html>
