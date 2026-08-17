@@ -96,18 +96,44 @@ final class Dispatcher {
             return
         }
 
-        // OS permission preflight
+        // OS permission preflight: if missing, prompt the user with a native
+        // one-click alert that opens the exact System Settings pane. A plain
+        // "Allow" cannot self-grant these system permissions — only the user
+        // can toggle them — so this gives them a one-click path to do it.
         if info.needsAccessibility && !OSChecks.accessibilityTrusted() {
-            error(id, -32001,
-                  "OS permission missing: enable Accessibility (System Settings > Privacy & Security > Accessibility)", connection)
+            OSChecks.promptOSPermission(
+                kind: "accessibility", origin: origin, capability: method, connection: connection,
+                onDone: { [weak self] in self?.retryOrDeny(id: id, method: method, params: params, connection: connection, kind: "Accessibility") }
+            )
             return
         }
         if info.needsScreenRecording && !OSChecks.screenRecordingGranted() {
-            error(id, -32001,
-                  "OS permission missing: enable Screen Recording (System Settings > Privacy & Security > Screen Recording)", connection)
+            OSChecks.promptOSPermission(
+                kind: "screen", origin: origin, capability: method, connection: connection,
+                onDone: { [weak self] in self?.retryOrDeny(id: id, method: method, params: params, connection: connection, kind: "Screen Recording") }
+            )
             return
         }
 
+        runCapability(id: id, method: method, params: params, connection: connection)
+    }
+
+    /// After the user opens Settings and returns, re-check; run if granted,
+    /// otherwise return a friendly OS-permission error.
+    private func retryOrDeny(id: Int, method: String, params: [String: Any], connection: NWConnection, kind: String) {
+        let cap = CAPABILITIES[method]
+        if cap?.needsAccessibility == true, !OSChecks.accessibilityTrusted() {
+            error(id, -32001, "\(kind) not granted — enable it in System Settings, then retry.", connection)
+            return
+        }
+        if cap?.needsScreenRecording == true, !OSChecks.screenRecordingGranted() {
+            error(id, -32001, "\(kind) not granted — enable it in System Settings, then retry.", connection)
+            return
+        }
+        runCapability(id: id, method: method, params: params, connection: connection)
+    }
+
+    private func runCapability(id: Int, method: String, params: [String: Any], connection: NWConnection) {
         do {
             let value = try Capabilities.call(method: method, params: params)
             result(id, value, connection)
@@ -146,8 +172,11 @@ final class Dispatcher {
 // MARK: - Native permission checks + approval dialog
 
 enum OSChecks {
+    /// True when Accessibility is granted. Passing `kAXTrustedCheckOptionPrompt: true`
+    /// makes macOS show its own one-click "grant Accessibility" prompt the first
+    /// time — the user taps Allow in that popup, no Settings hunting.
     static func accessibilityTrusted() -> Bool {
-        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         return AXIsProcessTrustedWithOptions(opts as CFDictionary)
     }
 
@@ -156,6 +185,34 @@ enum OSChecks {
             return CGPreflightScreenCaptureAccess()
         }
         return true
+    }
+
+    /// Shows a NATIVE alert: "Computer.js needs {kind} to use {capability}."
+    /// Tapping "Allow" opens the exact System Settings pane so the user just
+    /// flicks the switch — far easier than hunting for it. Called on the main
+    /// thread; `onDone` runs once the user has interacted.
+    static func promptOSPermission(kind: String, origin: String, capability: String, connection: NWConnection, onDone: @escaping () -> Void) {
+        DispatchQueue.main.async {
+            let setting = kind == "screen"
+                ? "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+                : "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Computer.js needs \(kind)"
+            alert.informativeText =
+                "\(kind == "screen" ? "Screen Recording" : "Accessibility") is required to \n"
+                + "use ‘\(capability)’ for \(origin.isEmpty ? "this website" : origin).\n\n"
+                + "Tap Allow to open System Settings, then turn it on — it takes a second."
+            alert.addButton(withTitle: "Allow & Open Settings")
+            alert.addButton(withTitle: "Not now")
+            let choice = alert.runModal()
+            if choice == .alertFirstButtonReturn {
+                if let url = URL(string: setting) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            onDone()
+        }
     }
 
     /// Runs a NATIVE macOS approval dialog on the main thread. Returns true on Allow.

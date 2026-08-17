@@ -122,8 +122,8 @@ final class RuntimeServer {
         let about = "Computer.js Runtime v0.2.0 (native)"
         Logger.log(about)
         Logger.log("  WebSocket: ws://127.0.0.1:8787/ws")
-        Logger.log("  Control panel: http://127.0.0.1:8788/  (opening browser…)")
-        NSWorkspace.shared.open(URL(string: "http://127.0.0.1:8788/")!)
+        Logger.log("  Control panel: http://127.0.0.1:8788/")
+        Logger.log("  (control panel available from the menu-bar icon)")
     }
 
     func stop() {
