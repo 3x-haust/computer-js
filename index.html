@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Computer.js</title>
+<style>
+  :root { --bg:#0a0e14; --panel:#11161f; --border:#222b3a; --text:#e7edf5; --muted:#8591a6; --accent:#5b8cff; --green:#3fb950; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"SF Pro Text",sans-serif; background:var(--bg); color:var(--text); line-height:1.6; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .wrap { max-width:520px; padding:40px 28px; text-align:center; }
+  .icon { font-size:48px; margin-bottom:18px; }
+  h1 { font-size:28px; letter-spacing:-.02em; font-weight:700; margin-bottom:8px; }
+  .sub { color:var(--muted); font-size:15px; margin-bottom:28px; }
+  .btn { display:inline-block; font:inherit; font-size:15px; font-weight:600; text-decoration:none; color:var(--text); background:#1b2333; border:1px solid var(--border); border-radius:10px; padding:13px 22px; margin:6px; transition: all .15s; }
+  .btn:hover { background:#253354; transform:translateY(-1px); }
+  .btn.p { background:var(--accent); border-color:var(--accent); }
+  .btn.p:hover { background:#6da4ff; }
+  .how { margin-top:32px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; text-align:left; }
+  .how h2 { font-size:14px; margin-bottom:10px; color:var(--accent); }
+  .how li { font-size:14px; color:var(--muted); margin-bottom:6px; }
+  .how code { background:#0a0e14; border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="icon">🖥</div>
+  <h1>Computer.js</h1>
+  <p class="sub">Your Mac's real capabilities, from a website. Native menu-bar app, control panel, and SDK — built in Swift.</p>
+  <div>
+    <a class="btn p" href="https://github.com/3x-haust/computer-js/releases/latest">Download DMG</a>
+    <a class="btn" href="https://github.com/3x-haust/computer-js">GitHub</a>
+  </div>
+  <div class="how">
+    <h2>Get started</h2>
+    <ol>
+      <li>Download and install <code>Computer.js Runtime.app</code> from the DMG (drag to Applications)</li>
+      <li>Launch it — opens a control panel at <code>http://127.0.0.1:8788</code></li>
+      <li>Grant permissions when prompted — your Mac is now connected</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>
